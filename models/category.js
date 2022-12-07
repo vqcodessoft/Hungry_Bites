@@ -1,22 +1,21 @@
+
 const mongoose = require("mongoose")
 
 const categoriesSchema = new mongoose.Schema({
     name:{
         type:String
     },
-    username:{
-        type:String
-    },
-    password:{
-        type:String
-    },
-
-    admine:[
-        {
+    status:{
+    type:String
+     },
+     product_id:[
+         {
             type: 'ObjectId',
-            ref: 'AdminLogin',
-        }
-    ]
+            ref: 'Product',
+         }
+     ]
+     
+    
 })
 
 var Category = new mongoose.model("Category",categoriesSchema);

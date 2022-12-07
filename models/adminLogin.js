@@ -1,6 +1,9 @@
 const mongoose = require("mongoose")
 
 const adminSchema = new mongoose.Schema({
+    name:{
+        type:String
+    },
     username:{
         type:String
     },
@@ -10,12 +13,20 @@ const adminSchema = new mongoose.Schema({
     type:{
         type:String
     },
-    category:[
-        {
-            type: 'ObjectId',
-            ref: 'Category',
-        }
-    ]
+    product_id:{
+        type: 'ObjectId',
+       ref: 'Product',
+    },
+    subscription:{
+        type:String
+    }
+
+    // category:[
+    //     {
+    //         type: 'ObjectId',
+    //         ref: 'Category',
+    //     }
+    // ]
     
 })
 
