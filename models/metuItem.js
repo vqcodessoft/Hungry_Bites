@@ -13,7 +13,11 @@ const menuItemSchema = new mongoose.Schema({
      product_id:{
         type: 'ObjectId',
         ref: 'Product',
-     }
+     },
+     cat_id:{
+        type: 'ObjectId',
+        ref: 'Category',
+     },
     
     
 })

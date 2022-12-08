@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+//var bcrypt = require('bcryptjs');
 require("./database/databaseConn")
 const AdminLogin = require("./models/adminLogin")
 const Products = require("./models/product")
@@ -15,6 +16,38 @@ app.get("/owner",(req,res)=>{
 
 
 ///--------------------------   -POST Request API BOX --   ------------------------------//
+ 
+//user signup 
+app.post("/signup", async (req, res) => {
+    const {name,username,email, password,type} = req.body
+    if (!name || !username || !email || !password || !type ) {
+        res.status(301).json({ message: "Please require all field" })
+    }
+    try {
+
+        const findUser = await AdminLogin.findOne({ username: username })
+        if (findUser) {
+            return res
+                .status(422)
+                .json({ error: " username already exists" });
+        }
+        const user = await new AdminLogin({name, username,email, password,type })
+        if(type!=="user"){
+            return res
+            .status(422)
+            .json({ error: "Invalid Type" });
+        }
+
+        const userRegister = await user.save()
+        if (userRegister) {
+            res.status(201).json({ data: user, message: "User Signup successfully" });
+        }
+
+    } catch (err) {
+       res.status(400).send(err)
+    }
+
+})
 
 //login
 app.post("/login",async(req,res)=>{
@@ -23,22 +56,37 @@ app.post("/login",async(req,res)=>{
         res.status(301).json({message:"Please fill username/password" })
     }
     try{
+           const category = await Category.find({})
+              console.log(">category>>>>",category)
+              
        
-        const data = await AdminLogin.findOne({username:username})
+        const data = await AdminLogin.findOne({username:username}).populate('product_id')
+              
+                 let result = ( data.type==='user' || 'Owner') ? category : ""
+                  console.log("result---->",result)
+            console.log("data>>>>>",data)
         console.log(">>>>.",data)
               if(data){
+               // var match =await  bcrypt.compare(password,data.password)
+
                     if(password===data.password){
                         res.status(201).send({
-                            type:data.type, 
-                            _id:data._id,
-                            category_id:data.category_id?data.category_id:"",
-                            message: "Login Successfully " })
+                             message: "Login Successfully ", 
+                             type:data?.type, 
+                             name:data.name,
+                             _id:data?._id,
+                              all_category:result,
+                             product_id:data?.product_id?._id?data?.product_id?._id:"",
+                             product_name:data?.product_id?.name,
+                             product_status:data?.product_id?.status
+                          
+                        })
                     }else{
                         res.send({ message: "password  didn't match" })
                     }
 
               }else{
-                res.status(402).send({ message: "User not register " })
+                res.status(302).send({ message: "User not register " })
               }
     }
     catch(error){
@@ -71,27 +119,45 @@ app.post("/login",async(req,res)=>{
 
 //Product
 app.post("/products",async(req,res)=>{
-       const {name,username,password,type,Category_type,subscription,address,phone_no,cat_id,status} = req.body;
+       const {name,username,password,type,Category_type,subscription,address,phone_no,cat_id,status,sort_order} = req.body;
        
        if(!name ||!username|| !password ||!type){
         res.status(301).json({message:"Please fill username/password" })
        }
        try{
             const {admin_id} = req.body
-            const {cat_id} = req.body
-           const data = await new Products({name,Category_type,address,phone_no,cat_id,status})
+            const {cat_id} = req.body;
+
+
+            if(type!=="admin"){
+                return res
+                .status(422)
+                .json({ error: "Invalid Type" });
+            }
+
+
+           const data = await new Products({name,Category_type,address,phone_no,cat_id,status,sort_order})
                      const category = await Category.findById(cat_id)
                     
                            await category?.product_id?.push(data)
            console.log(">>>>",data)
               //const admin = await AdminLogin.findById(admin_id)
             //  await admin?.category?.push(data)
+
+            const findUser = await AdminLogin.findOne({ username: username })
+        if (findUser) {
+            return res
+                .status(422)
+                .json({ error: " username already exists" });
+        }
+
                    const product_id  = data._id
                  data.save((err)=>{
                      if(!err){
-                         res.status(201).send({category:data})
-                          const admin = new AdminLogin({name,username,password,type,product_id,subscription,status})
-                          admin.save()
+                         res.status(201).send({products:data})
+                          const admins = new AdminLogin({name,username,password,type,product_id,subscription,status})
+                          
+                          admins.save()
                             // admin?.category?.push(data._id)
                      }else{
                          res.send(err)
@@ -128,10 +194,10 @@ app.post("/category",async(req,res)=>{
 
 //Menu Item for product
 app.post("/menu_item",async(req,res)=>{
-    const {product_name,description,price,product_id} = req.body
+    const {product_name,description,price,product_id,cat_id} = req.body
 
     try{
-        const menuItem = await new MenuItem({product_name,description,price,product_id})
+        const menuItem = await new MenuItem({product_name,description,price,product_id,cat_id})
          const product = await Products.findById(product_id)
             await product?.menu_item?.push(menuItem)
 
@@ -194,19 +260,21 @@ app.get("/find-products",async(req,res)=>{
 
 //----------------------------------------------------------------delete Request API Box--------------------->
 
-//Delete product and category inside product Id
+//Delete product and category inside product Id and admin and menuItem
 app.delete("/delete_products-category/:id",async(req,res)=>{
     try{
 
         const delete_product= await Products.findByIdAndDelete(req.params.id)
+        const delete_menuItem= await MenuItem.deleteMany({"product_id":req.params.id})
         const deleteAdmin= await AdminLogin.deleteOne({"product_id":req.params.id})
         const delete_category= await Category.updateMany({},{$pull:{product_id:{$in:[req.params.id]}}})
         console.log("deleteAdmin-->",deleteAdmin)
         console.log("delete_category-->",delete_category)
+        console.log("delete_menuItem-->",delete_menuItem)
           if(!req.params.id){
               return   res.status(400).send({message:"Pass Id"})
           }
-          res.status(201).send(delete_product)
+          res.status(201).send({message:"Product Delete Successfully",delete_product})
 
     }catch(err){
         console.log(err)
@@ -231,6 +299,91 @@ app.delete("/delete-menuItem/:id",async(req,res)=>{
     }
 })
 
+//delete category and category inside product also delete
+const allProduct=[];
+app.delete("/delete_category-with-insideProduct/:id",async(req,res)=>{
+      try{
+        const delete_Category= await Category.findByIdAndDelete(req.params.id)
+        const delete_product= await Products.deleteOne({"cat_id":req.params.id})
+        const delete_MenuItem= await MenuItem.deleteMany({"cat_id":req.params.id})
+       // const delete_product= await Products.updateMany({},{$pull:{cat_id:{$in:{id}}}})
+          console.log(">>>delete_Category>>>",delete_Category)
+          console.log(">>>delete_product>>>",delete_product)
+          console.log(">>>delete_product>>>",delete_MenuItem)
+       
+          if(!req.params.id){
+              return   res.status(400).send({message:"Pass Id"})
+          }
+          res.status(201).send(delete_Category)
+
+      }
+      catch(error){
+          res.status(301).send(error)
+      }
+})
+
+
+
+
 app.listen(port,()=>{
     console.log(`server is listen on: https://localhost:${port}`)
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////
+//delete category and category inside product also delete
+// app.delete("/delete_category-with-insideProduct/:id",async(req,res)=>{
+//     try{
+//       const productList = await Products.find({})
+//       const data = await Category.find({"product_id":req.params.id})
+//       productList.forEach(x=>{
+//             console.log(">>>x>>xx",x?._id)
+//             allProduct.push(x?._id)
+//                    let productId = x?._id.valueOf()
+//             let matchingId =data.filter(x=>x.product_id.includes(productId));
+//             console.log("----matchingId>",matchingId)
+//       })
+
+//          console.log("<<<allProduct<<",allProduct)
+
+//      // const delete_Category= await Category.findByIdAndDelete(req.params.id)
+//      // const delete_product= await Products.deleteOne({"cat_id":req.params.id})
+//      // const delete_product= await Products.updateMany({},{$pull:{cat_id:{$in:{id}}}})
+//         console.log(">>>delete_Category>>>",delete_Category)
+//         console.log(">>>delete_product>>>",delete_product)
+     
+//       //   if(!req.params.id){
+//       //       return   res.status(400).send({message:"Pass Id"})
+//       //   }
+//         res.status(201).send(data)
+
+//     }
+//     catch(error){
+//         res.status(301).send(error)
+//     }
+// })

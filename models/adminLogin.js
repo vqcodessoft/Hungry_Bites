@@ -1,10 +1,14 @@
 const mongoose = require("mongoose")
+//var bcrypt = require('bcryptjs');
 
 const adminSchema = new mongoose.Schema({
     name:{
         type:String
     },
     username:{
+        type:String
+    },
+    email:{
         type:String
     },
     password:{
@@ -19,8 +23,10 @@ const adminSchema = new mongoose.Schema({
     },
     subscription:{
         type:String
-    }
-
+    },
+    
+             
+    
     // category:[
     //     {
     //         type: 'ObjectId',
@@ -29,6 +35,19 @@ const adminSchema = new mongoose.Schema({
     // ]
     
 })
+
+// adminSchema.pre('save', async function(next){
+
+//     try{
+//         var salt = bcrypt.genSaltSync(10);
+//           const hashedPassword = await bcrypt.hash(this.password, salt)
+//           this.password=hashedPassword;
+//         next()
+//     }catch(error){
+//         next(error)
+//     }
+   
+// })
 
 var AdminLogin = new mongoose.model("AdminLogin",adminSchema);
 module.exports = AdminLogin;

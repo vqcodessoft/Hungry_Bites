@@ -20,6 +20,9 @@ const categoriesSchema = new mongoose.Schema({
      status:{
          type:String
      },
+     sort_order:{
+        type:String
+     },
      menu_item:[
          {
             type: 'ObjectId',
