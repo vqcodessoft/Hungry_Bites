@@ -6,7 +6,7 @@ const AdminLogin = require("./models/adminLogin")
 const Products = require("./models/product")
 const Category = require("./models/category")
 const MenuItem = require("./models/metuItem")
-const port = 8000;
+
 
 app.use(express.json())
 
@@ -57,15 +57,9 @@ app.post("/login",async(req,res)=>{
     }
     try{
            const category = await Category.find({})
-              console.log(">category>>>>",category)
-              
-       
         const data = await AdminLogin.findOne({username:username}).populate('product_id')
               
                  let result = ( data.type==='user' || 'Owner') ? category : ""
-                  console.log("result---->",result)
-            console.log("data>>>>>",data)
-        console.log(">>>>.",data)
               if(data){
                // var match =await  bcrypt.compare(password,data.password)
 
@@ -125,10 +119,8 @@ app.post("/products",async(req,res)=>{
         res.status(301).json({message:"Please fill username/password" })
        }
        try{
-            const {admin_id} = req.body
+          
             const {cat_id} = req.body;
-
-
             if(type!=="admin"){
                 return res
                 .status(422)
@@ -137,13 +129,8 @@ app.post("/products",async(req,res)=>{
 
 
            const data = await new Products({name,Category_type,address,phone_no,cat_id,status,sort_order})
-                     const category = await Category.findById(cat_id)
-                    
-                           await category?.product_id?.push(data)
-           console.log(">>>>",data)
-              //const admin = await AdminLogin.findById(admin_id)
-            //  await admin?.category?.push(data)
-
+              const category = await Category.findById(cat_id)
+              await category?.product_id?.push(data)
             const findUser = await AdminLogin.findOne({ username: username })
         if (findUser) {
             return res
@@ -151,11 +138,11 @@ app.post("/products",async(req,res)=>{
                 .json({ error: " username already exists" });
         }
 
-                   const product_id  = data._id
+                   //const product_id  = data._id
                  data.save((err)=>{
                      if(!err){
                          res.status(201).send({products:data})
-                          const admins = new AdminLogin({name,username,password,type,product_id,subscription,status})
+                          const admins = new AdminLogin({name,username,password,type,subscription,status})
                           
                           admins.save()
                             // admin?.category?.push(data._id)
@@ -205,7 +192,7 @@ app.post("/menu_item",async(req,res)=>{
                 if(err){
                     res.status(400).send(err)
                 }else{
-                    res.status(200).send(menuItem)
+                    res.status(201).send(menuItem)
                 }
             })
 
@@ -223,7 +210,18 @@ app.get("/find-category",async(req,res)=>{
 
     try{
         const findCategory = await Category.find({}).populate('product_id')
-        console.log(">>findCategory>>",findCategory)
+             res.status(201).send(findCategory)
+
+    }catch(error){
+        res.status(400).send(error)
+    }
+})
+// get category with Id
+app.get("/find-category/:id",async(req,res)=>{
+
+    try{
+        const id = req.params.id
+        const findCategory = await Category.findById(id).populate('product_id')
              res.status(201).send(findCategory)
 
     }catch(error){
@@ -231,11 +229,24 @@ app.get("/find-category",async(req,res)=>{
     }
 })
 
+
+
+
 // get product-----
 app.get("/find-products",async(req,res)=>{
     try{
         const findProduct = await Products.find({}).populate('menu_item')
-        console.log(">>findProduct>>",findProduct)
+        res.status(201).send(findProduct)
+
+    }catch(error){
+        res.status(400).send(error)
+    }
+})
+//get product----- with Id
+app.get("/find-products/:id",async(req,res)=>{
+    try{
+        const id = req.params.id
+        const findProduct = await Products.findById(id).populate('menu_item')
         res.status(201).send(findProduct)
 
     }catch(error){
@@ -243,11 +254,13 @@ app.get("/find-products",async(req,res)=>{
     }
 })
 
+
+
+
 //get Menu Items ------
   app.get("/find-menuItem",async(req,res)=>{
     try{
         const findMenuItem = await MenuItem.find({})
-        console.log(">>findMenuItem>>",findMenuItem)
         res.status(201).send(findMenuItem)
 
     }catch(error){
@@ -255,7 +268,18 @@ app.get("/find-products",async(req,res)=>{
     }
 })
 
+//get Menu Items ------with id
+app.get("/find-menuItem/:id",async(req,res)=>{
+    try{
 
+        const id = req.params.id
+        const findMenuItem = await MenuItem.findById(id)
+        res.status(201).send(findMenuItem)
+
+    }catch(error){
+        res.status(400).send(error)
+    }
+})
 
 
 //----------------------------------------------------------------delete Request API Box--------------------->
@@ -268,9 +292,6 @@ app.delete("/delete_products-category/:id",async(req,res)=>{
         const delete_menuItem= await MenuItem.deleteMany({"product_id":req.params.id})
         const deleteAdmin= await AdminLogin.deleteOne({"product_id":req.params.id})
         const delete_category= await Category.updateMany({},{$pull:{product_id:{$in:[req.params.id]}}})
-        console.log("deleteAdmin-->",deleteAdmin)
-        console.log("delete_category-->",delete_category)
-        console.log("delete_menuItem-->",delete_menuItem)
           if(!req.params.id){
               return   res.status(400).send({message:"Pass Id"})
           }
@@ -307,9 +328,6 @@ app.delete("/delete_category-with-insideProduct/:id",async(req,res)=>{
         const delete_product= await Products.deleteOne({"cat_id":req.params.id})
         const delete_MenuItem= await MenuItem.deleteMany({"cat_id":req.params.id})
        // const delete_product= await Products.updateMany({},{$pull:{cat_id:{$in:{id}}}})
-          console.log(">>>delete_Category>>>",delete_Category)
-          console.log(">>>delete_product>>>",delete_product)
-          console.log(">>>delete_product>>>",delete_MenuItem)
        
           if(!req.params.id){
               return   res.status(400).send({message:"Pass Id"})
@@ -325,10 +343,7 @@ app.delete("/delete_category-with-insideProduct/:id",async(req,res)=>{
 
 
 
-app.listen(port,()=>{
-    console.log(`server is listen on: https://localhost:${port}`)
-})
-
+module.exports=app;
 
 
 
