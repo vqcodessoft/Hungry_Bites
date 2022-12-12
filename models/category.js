@@ -8,6 +8,9 @@ const categoriesSchema = new mongoose.Schema({
     status:{
     type:String
      },
+     profile:{
+        type:String
+      },
      product_id:[
          {
             type: 'ObjectId',

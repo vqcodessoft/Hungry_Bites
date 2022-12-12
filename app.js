@@ -1,18 +1,43 @@
 const express = require('express')
 const app = express()
+//const bodyParser = require("body-parser");
+const cors = require("cors");
 //var bcrypt = require('bcryptjs');
 require("./database/databaseConn")
 const AdminLogin = require("./models/adminLogin")
 const Products = require("./models/product")
 const Category = require("./models/category")
 const MenuItem = require("./models/metuItem")
-
-
+const multer = require("multer");
+//const fs = require("fs");
+const path = require("path");
+app.use(cors());
+// app.use(bodyParser.urlencoded({ extended: false }));
+// app.use(bodyParser.json());
 app.use(express.json())
 
 app.get("/owner",(req,res)=>{
     res.send("Hello World")
 })
+
+
+
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/images')
+    },
+    filename: (req, file, cb) => {
+        return cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`)
+    }
+})
+const upload = multer({ storage: storage })
+// const storage = multer.diskStorage({
+//     destination: './public/images',
+//     filename: (req, file, cb) => {
+//         return cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`)
+//     }
+// })
 
 
 ///--------------------------   -POST Request API BOX --   ------------------------------//
@@ -157,14 +182,21 @@ app.post("/products",async(req,res)=>{
        }
 })
 
+
+
+
+
+app.use('/category', express.static('public/images'));
 //Category
-app.post("/category",async(req,res)=>{
-           const {name,status}=req.body
-           if(!name || !status){
-            res.status(301).json({message:"Please fill name/status" })
-           }
+app.post("/category",upload.single("profile"),async(req,res)=>{
+    let profile = (req.file) ? req.file.filename : null
+          const {name,status}=req.body
+        //    if(!name || !status){
+        //     res.status(301).json({message:"Please fill name/status" })
+        //    }
            try{
-               const category= await new Category({name,status})
+               const category= await new Category({name,status,profile})
+               console.log("category---->",category)
                await category.save((err) => {
                 if (err) {
                     res.send(err)
@@ -204,13 +236,16 @@ app.post("/menu_item",async(req,res)=>{
 })
 
 //--------------------------------------------------Get Request API BOX ------------------------------------->
-
+const imagerurl=['public/images/image_2022_12_12T06_13_21_468Z.png','public/images/image_2022_12_12T06_13_21_468Z.png','public/images/image_2022_12_12T06_10_15_814Z.png']
+app.get("/icon",(req,res)=>{
+ res.send(imagerurl)
+})
 //get category----
 app.get("/find-category",async(req,res)=>{
 
     try{
         const findCategory = await Category.find({}).populate('product_id')
-             res.status(201).send(findCategory)
+             res.status(201).send({data:findCategory})
 
     }catch(error){
         res.status(400).send(error)
