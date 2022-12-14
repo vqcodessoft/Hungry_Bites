@@ -23,6 +23,27 @@ const categoriesSchema = new mongoose.Schema({
      sort_order:{
         type:String
      },
+     restaurant_name:{
+        type:String
+     },
+     city:{
+        type:String
+     },
+   land_mark:{
+    type:String
+   },
+   opening_day:[{
+    type:String
+   }],
+   opening_time:{
+    type:String
+   },
+   closing_time:{
+    type:String
+   },
+   profile:[{
+       type:String
+   }],
      menu_item:[
          {
             type: 'ObjectId',
