@@ -22,16 +22,7 @@ app.get("/owner",(req,res)=>{
 //////////////////////////////////////////
 
 const fs = require("fs");
-// Reads file in form buffer => <Buffer ff d8 ff db 00 43 00 ...
 
-
-// Create a base64 string from an image => ztso+Mfuej2mPmLQxgD ...
-// const base64 = fs.readFileSync("public/images/1670842622351_pic5.jpg", "base64");
-// // Convert base64 to buffer => <Buffer ff d8 ff db 00 43 00 ...
-
-
-
-//console.log("--buffer1",buffer1)
 /////////////////////////////////////////////////////////////////////
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -42,7 +33,7 @@ const storage = multer.diskStorage({
     }
 })
 
-/
+
 
 ///--------------------------   -POST Request API BOX --   ------------------------------//
  
@@ -50,7 +41,7 @@ const storage = multer.diskStorage({
 app.post("/signup", async (req, res) => {
     const {name,username,email, password,type} = req.body
     if (!name  || !email || !password || !type ) {
-        res.status(301).json({ message: "Please require all field" })
+       return res.status(301).json({ message: "Please require all field" })
     }
     try {
 
@@ -82,7 +73,7 @@ app.post("/signup", async (req, res) => {
 app.post("/login",async(req,res)=>{
    const {email,password} = req.body;
     if(!req.body.email ||!req.body.password ){
-        res.status(301).json({message:"Please fill username/password" })
+       return res.status(301).json({message:"Please fill username/password" })
     }
     try{
            const category = await Category.find({})
@@ -125,13 +116,13 @@ app.post("/login",async(req,res)=>{
 //update password method
  app.post("/update_password",async(req,res)=>{
      try{
-         const admin_id = req.body.admin_id
+         const email = req.body.email
           const  password = req.body.password
    
-          const data = await AdminLogin.findOne({_id:admin_id})
+          const data = await AdminLogin.findOne({email:email})
             if(data){
 
-            const adminData =  await AdminLogin.findByIdAndUpdate({_id:admin_id},{$set:{
+            const adminData =  await AdminLogin.findOneAndUpdate({email:email},{$set:{
                 password:password
                }})
                res.status(201).send({success:true,message:"Password has been Updated!"})
@@ -150,17 +141,18 @@ app.post("/products",async(req,res)=>{
       // let profile = (req.files) ? req.files.filename : null
        const {name,email,password,type,Category_type,
         subscription,address,phone_no,cat_id,status,sort_order,
-        restaurant_name,city,land_mark,opening_day,opening_time,
+        shop_name,city,land_mark,opening_day,opening_time,
         closing_time,profile
     } = req.body;
        console.log(">>>>>>>>>>",profile)
-       if(!name ||!email|| !password ||!type){
-        res.status(301).json({message:"Please fill email/password" })
+       if(!name ||!email|| !password ||!type || !Category_type || !subscription || !address || !phone_no || !cat_id || !status || !sort_order || !shop_name || !city || !land_mark || !opening_day || !opening_time || !closing_time){
+       return res.status(301).json({message:"Please all field required" })
        }
 
-    
-    
 
+       try{
+    
+          
     const upload = multer({ storage: storage }).array("profile")
       
         upload(req, res, function(err) {
@@ -185,7 +177,7 @@ app.post("/products",async(req,res)=>{
        console.log("arr1",arr1)
          }
          let imageList=[];
-       try{
+      
           
           //  const {cat_id} = req.body;
             if(type!=="admin"){
@@ -193,7 +185,7 @@ app.post("/products",async(req,res)=>{
                 .status(422)
                 .json({ message: "Invalid Type" });
             }
-         await   arr1.forEach((profile,index,arr)=>{
+         await  arr1.forEach((profile,index,arr)=>{
                 // buffer = Buffer.from(profile, "base64");
                 // path=path + profile.path + ','
                 // console.log(">>>.",path)
@@ -211,8 +203,8 @@ app.post("/products",async(req,res)=>{
             })
            
            const data = await new Products({name,Category_type,address,phone_no,cat_id,status,sort_order,
-            restaurant_name,city,land_mark,opening_day,opening_time,closing_time,profile:imageList})
-            
+            shop_name,city,land_mark,opening_day,opening_time,closing_time,profile:imageList})
+             console.log(">>>>>>data",data)
               const category = await Category.findById(cat_id)
               await category?.product_id?.push(data)
 
@@ -229,9 +221,9 @@ app.post("/products",async(req,res)=>{
         }
 
                    //const product_id  = data._id
-                 data.save((err)=>{
+                await data.save((err)=>{
                      if(!err){
-                         res.status(201).send({products:data})
+                         res.status(201).send({message:"Product Added Succesfully",products:data})
                           const admins = new AdminLogin({name,email,password,type,subscription,status})
                           
                           admins.save()
@@ -255,7 +247,7 @@ app.post("/category",async(req,res)=>{
           const {name,status,profile}=req.body
         
            if(!name || !status || !profile){
-            res.status(301).json({message:"Please fill name/status and profile" })
+            return res.status(301).json({message:"Please all field required" })
            }
         const upload = multer({ storage: storage }).single("profile")
         upload(req, res, function(err) {
@@ -285,7 +277,7 @@ app.post("/category",async(req,res)=>{
                 if (err) {
                     res.send(err)
                 } else {
-                    res.status(201).json(category)
+                    res.status(201).json({message:"Category Added Successfully",data:category})
                 }
             })
 
@@ -298,13 +290,14 @@ app.post("/category",async(req,res)=>{
 //Menu Item for product
 app.post("/menu_item",async(req,res)=>{
     const {item_name,item_details,price,discount,profile,product_id,cat_id} = req.body
-            if(!item_name || !item_details || !price || !discount || !profile || !product_id){
-                res.status(301).json({message:"Please all field required" })
+            if(!item_name || !item_details || !price || !product_id || !cat_id){
+                return res.status(301).json({message:"Please all field required" })
             }
 
             const upload = multer({ storage: storage }).single("profile")
             upload(req, res, function(err) {
                 console.log("File uploaded");
+
                 //res.end('File is uploaded')
             })
             const buffer = Buffer.from(profile, "base64");
@@ -330,7 +323,7 @@ app.post("/menu_item",async(req,res)=>{
                 if(err){
                     res.status(400).send(err)
                 }else{
-                    res.status(201).send(menuItem)
+                    res.status(201).send({message:"MenuItem Added Successfully",data:menuItem})
                 }
             })
 
@@ -363,6 +356,7 @@ app.get("/find-category/:id",async(req,res)=>{
     try{
         const id = req.params.id
         const findCategory = await Category.findById(id).populate('product_id')
+        console.log("-findCategory-->",findCategory)
              res.status(201).send({data:findCategory})
 
     }catch(error){
@@ -421,7 +415,44 @@ app.get("/find-menuItem/:id",async(req,res)=>{
         res.status(400).send(error)
     }
 })
+//------------------------------------------- Update Request API BOX ----------------------------------------->>>
+// update Menu Item
+ app.post("/update-menu_item",async(req,res)=>{
+    try{
+        const {item_name,item_details,price,discount,profile,product_id,cat_id} = req.body
+        // const item_name = req.body.item_name
+        //  const  password = req.body.password
+        const  item_id = req.body.item_id
 
+        const buffer = Buffer.from(profile, "base64");
+       
+            const date = new Date()
+            let ms = date.getMilliseconds();
+             const imageName= "hungry_bites"+ms+".jpg"
+             console.log("--imageName-->>>>>",imageName)
+            fs.writeFile(`public/images/${imageName}`, buffer, "base64", function(err) {
+                console.log(err); // writes out file without error, but it's not a valid image
+              });
+         const data = await MenuItem.findById({_id:item_id})
+           if(data){
+
+           const adminData =  await MenuItem.findByIdAndUpdate({_id:item_id},{$set:{
+            item_name:item_name,
+            item_details:item_details,
+            price:price,
+            profile:imageName
+
+              }})
+              console.log("---->>adminData><<>>>>",adminData)
+              res.status(201).send({success:true,message:"Menu Item has been Updated!"})
+           }else{
+               res.status(201).send({success:false,message:"Item Id Not found!"})
+           }
+
+    }catch(error){
+        res.status(400).send(error.message)
+    }
+})
 
 //----------------------------------------------------------------delete Request API Box--------------------->
 
@@ -436,7 +467,7 @@ app.delete("/delete_products-category/:id",async(req,res)=>{
           if(!req.params.id){
               return   res.status(400).send({message:"Pass Id"})
           }
-          res.status(201).send({message:"Product Delete Successfully",delete_product})
+          res.status(201).send({message:"Product Delete Successfully"})
 
     }catch(err){
         console.log(err)
@@ -454,7 +485,7 @@ app.delete("/delete-menuItem/:id",async(req,res)=>{
           if(!req.params.id){
               return   res.status(400).send({message:"Pass Id"})
           }
-          res.status(201).send(delete_menuItem)
+          res.status(201).send({message:"MenuItem Delete Successfully"})
 
     }catch(err){
         console.log(err)
@@ -466,14 +497,15 @@ const allProduct=[];
 app.delete("/delete_category-with-insideProduct/:id",async(req,res)=>{
       try{
         const delete_Category= await Category.findByIdAndDelete(req.params.id)
-        const delete_product= await Products.deleteOne({"cat_id":req.params.id})
+        const delete_product= await Products.deleteMany({"cat_id":req.params.id})
         const delete_MenuItem= await MenuItem.deleteMany({"cat_id":req.params.id})
        // const delete_product= await Products.updateMany({},{$pull:{cat_id:{$in:{id}}}})
+       console.log("delete_product-->",delete_product)
        
           if(!req.params.id){
               return   res.status(400).send({message:"Pass Id"})
           }
-          res.status(201).send(delete_Category)
+          res.status(201).send({message:"Category Delete Successfully"})
 
       }
       catch(error){

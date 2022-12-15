@@ -23,7 +23,7 @@ const categoriesSchema = new mongoose.Schema({
      sort_order:{
         type:String
      },
-     restaurant_name:{
+     shop_name:{
         type:String
      },
      city:{
