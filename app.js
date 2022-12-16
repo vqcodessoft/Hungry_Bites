@@ -138,62 +138,40 @@ app.post("/login",async(req,res)=>{
  
 //Product
 app.post("/products",async(req,res)=>{
-      // let profile = (req.files) ? req.files.filename : null
        const {name,email,password,type,Category_type,
         subscription,address,phone_no,cat_id,status,sort_order,
         shop_name,city,land_mark,opening_day,opening_time,
         closing_time,profile
     } = req.body;
+    
        console.log(">>>>>>>>>>",profile)
        if(!name ||!email|| !password ||!type || !Category_type || !subscription || !address || !phone_no || !cat_id || !status || !sort_order || !shop_name || !city || !land_mark || !opening_day || !opening_time || !closing_time){
        return res.status(301).json({message:"Please all field required" })
        }
-
-
        try{
-    
-          
-    const upload = multer({ storage: storage }).array("profile")
-      
+         const upload = multer({ storage: storage }).array("profile")
         upload(req, res, function(err) {
             console.log("File uploaded");
-            //res.end('File is uploaded')
+        
         })
         let buffer;
-        // const buffer = Buffer.from(profile, "base64");
         let arr1 =[]
         if(req.body.profile){
-            let path=''
            await  req.body.profile.forEach((profile,index,arr)=>{
                  buffer = Buffer.from(profile, "base64");
-                 // path=path + profile.path + ','
-                 // console.log(">>>.",path)
                 arr1.push(buffer)
-                //  return profile;
              })
-             // path=path.substring(0,path.lastIndexOf(","))
-             //  req.body.profile=path
-             // data.profile=imageName
-       console.log("arr1",arr1)
          }
          let imageList=[];
-      
-          
-          //  const {cat_id} = req.body;
             if(type!=="admin"){
                 return res
                 .status(422)
                 .json({ message: "Invalid Type" });
             }
          await  arr1.forEach((profile,index,arr)=>{
-                // buffer = Buffer.from(profile, "base64");
-                // path=path + profile.path + ','
-                // console.log(">>>.",path)
-            //    arr1.push(buffer)
-               //  return profile;
                const date = new Date()
                let ms = date.getMilliseconds();
-                const imageName= "hungry_bites"+ms+".png"
+                const imageName=profile? "hungry_bites"+ms+".png" : null
                 console.log("--imageName-->>>>>",imageName)
                 imageList.push(imageName)
                fs.writeFile(`public/images/${imageName}`, profile, "base64", function(err) {
@@ -201,6 +179,11 @@ app.post("/products",async(req,res)=>{
                  });
                  console.log("imageList",imageList)
             })
+
+            ///////////////////////////
+
+
+            //////////////////////////////////////
            
            const data = await new Products({name,Category_type,address,phone_no,cat_id,status,sort_order,
             shop_name,city,land_mark,opening_day,opening_time,closing_time,profile:imageList})
@@ -208,19 +191,12 @@ app.post("/products",async(req,res)=>{
               const category = await Category.findById(cat_id)
               await category?.product_id?.push(data)
 
-            //   if(req.file){
-            //     data.profile=req.file.filename
-            //   }
-
-
             const findUser = await AdminLogin.findOne({ email: email })
         if (findUser) {
             return res
                 .status(422)
                 .json({ message: " username already exists" });
         }
-
-                   //const product_id  = data._id
                 await data.save((err)=>{
                      if(!err){
                          res.status(201).send({message:"Product Added Succesfully",products:data})
@@ -261,7 +237,7 @@ app.post("/category",async(req,res)=>{
 
             const date = new Date()
             let ms = date.getMilliseconds();
-             const imageName= "hungry_bites"+ms+".jpg"
+             const imageName=profile? "hungry_bites"+ms+".jpg": null
              console.log("--imageName-->>>>>",imageName)
             
             
@@ -302,15 +278,12 @@ app.post("/menu_item",async(req,res)=>{
             })
             const buffer = Buffer.from(profile, "base64");
 
-
     try{
 
         const date = new Date()
         let ms = date.getMilliseconds();
-         const imageName= "hungry_bites"+ms+".jpg"
+         const imageName= profile? "hungry_bites"+ms+".jpg" : null
          console.log("--imageName-->>>>>",imageName)
-        
-        
         
         fs.writeFile(`public/images/${imageName}`, buffer, "base64", function(err) {
             console.log(err); // writes out file without error, but it's not a valid image
@@ -390,8 +363,6 @@ app.get("/find-products/:id",async(req,res)=>{
 })
 
 
-
-
 //get Menu Items ------
   app.get("/find-menuItem",async(req,res)=>{
     try{
@@ -416,35 +387,96 @@ app.get("/find-menuItem/:id",async(req,res)=>{
     }
 })
 //------------------------------------------- Update Request API BOX ----------------------------------------->>>
+
+//Update Category
+
+app.post("/update-category",async(req,res)=>{
+    try{
+        const {name,status,profile}=req.body
+           const cat_id = req.body.cat_id
+           const upload = multer({ storage: storage }).single("profile")
+        upload(req, res, function(err) {
+            console.log("File uploaded");
+            //res.end('File is uploaded')
+        })
+
+           const buffer = Buffer.from(profile, "base64");
+               const date = new Date()
+               let ms = date.getMilliseconds();
+                const imageName="hungry_bites"+ms+".png"
+                console.log("--imageName-->>>>>",imageName)
+               fs.writeFile(`public/images/${imageName}`, buffer, "base64", function(err) {
+                   console.log(err); // writes out file without error, but it's not a valid image
+                 });
+
+               //  uploadDir = path.join(__dirname, './public/images/');
+                // let oldFileName = '';
+
+
+        const data = await Category.findById({_id:cat_id})
+
+        // oldFileName = data.profile;
+
+        //     console.log('./public/images/' + oldFileName);
+        //     fs.unlink('./public/images/' + oldFileName, (err) => {
+        //         console.log(err);
+        //     });
+
+        if(data){
+        const category =  await Category.findByIdAndUpdate({_id:cat_id},{$set:{
+            name:name,
+            status:status,
+            profile:profile?imageName:data.profile,
+        
+
+           }})
+            console.log(">>>category>.",category)
+           res.status(201).send({success:true,message:"Menu Item has been Updated! successfully"})
+        }else{
+            res.status(201).send({success:false,message:"Item Id Not found!"})
+        }
+
+    }catch(error){
+        res.status(400).send(error.message)
+    }
+})
+
+
+
+
+
+
 // update Menu Item
  app.post("/update-menu_item",async(req,res)=>{
     try{
         const {item_name,item_details,price,discount,profile,product_id,cat_id} = req.body
-        // const item_name = req.body.item_name
-        //  const  password = req.body.password
         const  item_id = req.body.item_id
-
-        const buffer = Buffer.from(profile, "base64");
+        const buffer = Buffer.from(JSON.toString(profile), "base64");
        
             const date = new Date()
             let ms = date.getMilliseconds();
-             const imageName= "hungry_bites"+ms+".jpg"
+             const imageName=profile?"hungry_bites"+ms+".jpg":null
              console.log("--imageName-->>>>>",imageName)
             fs.writeFile(`public/images/${imageName}`, buffer, "base64", function(err) {
                 console.log(err); // writes out file without error, but it's not a valid image
               });
+
          const data = await MenuItem.findById({_id:item_id})
            if(data){
 
+
+            // fs.unlink("public/images" + data.profile, (err) => {
+            //     console.log(err);
+            // });
            const adminData =  await MenuItem.findByIdAndUpdate({_id:item_id},{$set:{
             item_name:item_name,
             item_details:item_details,
             price:price,
-            profile:imageName
+            profile:profile?imageName:data.profile
 
               }})
               console.log("---->>adminData><<>>>>",adminData)
-              res.status(201).send({success:true,message:"Menu Item has been Updated!"})
+              res.status(201).send({success:true,message:"Menu Item has been Updated! successfully"})
            }else{
                res.status(201).send({success:false,message:"Item Id Not found!"})
            }
@@ -453,6 +485,72 @@ app.get("/find-menuItem/:id",async(req,res)=>{
         res.status(400).send(error.message)
     }
 })
+
+// Update Product 
+app.post("/update-product",async(req,res)=>{
+    try{
+        const {name,Category_type,address,phone_no,cat_id,status,sort_order,shop_name,city,land_mark,opening_day,opening_time, closing_time,profile} = req.body;
+               const product_id =req.body.product_id
+               const admin_id =req.body.admin_id
+
+               let buffer;
+               let arr1 =[]
+               if(profile){
+                  await  profile.forEach((profile,index,arr)=>{
+                        buffer = Buffer.from(JSON.toString(profile), "base64");
+                       arr1.push(buffer)
+                    })
+                }
+                let imageList=[];
+                  
+                await  arr1.forEach((profile,index,arr)=>{
+                      const date = new Date()
+                      let ms = date.getMilliseconds();
+                       const imageName=profile? "hungry_bites"+ms+".png" : null
+                       console.log("--imageName-->>>>>",imageName)
+                       imageList.push(imageName)
+                      fs.writeFile(`public/images/${imageName}`, profile, "base64", function(err) {
+                          console.log(err); // writes out file without error, but it's not a valid image
+                        });
+                        console.log("imageList",imageList)
+                   })
+
+
+  
+         const data = await Products.findById({_id:product_id})
+         if(data){
+             console.log(">>>>>>>>>data>>>>",data)
+             console.log(">>>>>>>>>data>1111>>>",data.profile)
+           // status,sort_order,shop_name,city,land_mark,opening_day,opening_time,closing_time,profile
+         const adminData =  await Products.findByIdAndUpdate({_id:product_id},{$set:{
+            name:name,
+            Category_type:Category_type,
+            address:address,
+            phone_no:phone_no,
+            cat_id:cat_id,
+            status:status,
+            sort_order:sort_order,
+            shop_name:shop_name,
+            city:city,
+            land_mark:land_mark,
+            opening_day:opening_day,
+            opening_time:opening_time,
+            closing_time:closing_time,
+          profile:profile?imageList:data.profile
+
+            }})
+            console.log("---->>adminData><<>>>>",adminData)
+            console.log("---->>adminData><<>>>>",adminData.profile)
+            res.status(201).send({success:true,message:"Product has been Updated Successfully!"})
+         }else{
+             res.status(201).send({success:false,message:"Product Id Not found!"})
+         }
+
+    }catch(error){
+        res.status(400).send(error.message)
+    }
+})
+
 
 //----------------------------------------------------------------delete Request API Box--------------------->
 
